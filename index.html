@@ -1,1 +1,144 @@
-
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Qualcomm Live Analytics</title>
+<style>
+:root{--bg:#fbfaf9;--card:#fff;--ink:#1c1b1f;--mute:#6b6670;--line:#e6e2e0;--acc:#e8575f;--blue:#2f6fed;--green:#13966b;--amber:#c98a0b;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#17161a;--card:#201f24;--ink:#f1eff2;--mute:#9a95a0;--line:#33313a;--acc:#ff7a82;--blue:#6c9aff;--green:#3fd1a0;--amber:#e8b13c}}
+:root[data-theme="dark"]{--bg:#17161a;--card:#201f24;--ink:#f1eff2;--mute:#9a95a0;--line:#33313a;--acc:#ff7a82;--blue:#6c9aff;--green:#3fd1a0;--amber:#e8b13c}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.45}
+header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:8px;padding:18px 24px 6px}
+h1{font-family:Georgia,"Playfair Display",serif;font-size:28px;margin:0;color:var(--acc)}
+.sub{color:var(--mute);font-size:13px}
+.live{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--mute)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:p 1s infinite}
+@keyframes p{50%{opacity:.25}}
+@media (prefers-reduced-motion:reduce){.dot{animation:none}}
+main{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px;padding:12px 24px 24px;max-width:1200px;margin:0 auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.card h2{margin:0;font-size:17px}
+.q{color:var(--mute);font-size:13px;margin:2px 0 8px}
+canvas{width:100%;height:170px;display:block}
+.kpis{display:flex;gap:16px;flex-wrap:wrap;margin-top:6px;font-size:13px;color:var(--mute)}
+.kpis b{display:block;font-size:17px;color:var(--ink);font-variant-numeric:tabular-nums}
+.ins{margin:10px 0 0;font-size:13.5px;border-left:3px solid var(--acc);padding-left:10px}
+.row{display:grid;grid-template-columns:84px 1fr 62px;gap:8px;align-items:center;font-size:13px;margin:9px 0}
+.track{position:relative;height:16px;background:var(--bg);border-radius:4px}
+.track i{position:absolute;top:0;height:100%;border-radius:4px;transition:all .4s}
+.track.c:after{content:"";position:absolute;left:50%;top:-2px;bottom:-2px;border-left:1px solid var(--mute)}
+.row span:last-child{text-align:right;font-variant-numeric:tabular-nums}
+.cmp{max-width:1200px;margin:0 auto;padding:0 24px 18px}
+.wrap{overflow-x:auto;margin-top:8px}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:13.5px}
+th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+thead th{background:var(--acc);color:#fff}
+tbody th{background:var(--bg);width:120px}
+footer{max-width:1200px;margin:0 auto;padding:0 24px 24px;color:var(--mute);font-size:12px}
+</style>
+</head>
+<body>
+<header>
+  <div><h1>Qualcomm: Live Analytics</h1><div class="sub">Revenue run-rate, $M per quarter. Simulated feed, updates every second</div></div>
+  <div class="live"><span class="dot"></span><span id="clock">--:--:--</span></div>
+</header>
+<main>
+  <section class="card"><h2>1. Descriptive</h2><div class="q">What happened? Last 60 seconds</div>
+    <canvas id="c1"></canvas>
+    <div class="kpis"><div>Now<b id="k1">-</b></div><div>Average<b id="k2">-</b></div><div>High<b id="k3">-</b></div><div>Low<b id="k4">-</b></div></div>
+  </section>
+  <section class="card"><h2>2. Diagnostic</h2><div class="q">Why did it happen? Change by segment vs 60s ago</div>
+    <div id="diag"></div>
+    <p class="ins" id="i2"></p>
+  </section>
+  <section class="card"><h2>3. Predictive</h2><div class="q">What is likely to happen? Next 15 seconds</div>
+    <canvas id="c3"></canvas>
+    <div class="kpis"><div>Forecast (+15s)<b id="p1">-</b></div><div>Trend<b id="p2">-</b></div></div>
+  </section>
+  <section class="card"><h2>4. Prescriptive</h2><div class="q">What should we do next? Suggested budget split</div>
+    <div id="presc"></div>
+    <p class="ins" id="i4"></p>
+  </section>
+</main>
+<section class="cmp"><div class="card"><h2>How the four types of analytics differ</h2>
+<div class="wrap"><table>
+<thead><tr><th></th><th>Descriptive</th><th>Diagnostic</th><th>Predictive</th><th>Prescriptive</th></tr></thead>
+<tbody>
+<tr><th>Question</th><td>What happened?</td><td>Why did it happen?</td><td>What is likely to happen?</td><td>What should we do next?</td></tr>
+<tr><th>Time focus</th><td>Past</td><td>Past (root cause)</td><td>Future</td><td>Future (action)</td></tr>
+<tr><th>Technique</th><td>Charts, KPIs, dashboards</td><td>Drill-down, comparison, correlation</td><td>Statistics, regression, machine learning</td><td>Simulation, optimization</td></tr>
+<tr><th>Output</th><td>Summary of events</td><td>Reason behind a change</td><td>Forecast with probability</td><td>Recommended decision</td></tr>
+<tr><th>Qualcomm example</th><td>Total revenue is $X M right now</td><td>Revenue fell because of the Handsets segment</td><td>Revenue forecast for the next 15 seconds / next quarter</td><td>Increase budget in the segment with the strongest momentum</td></tr>
+<tr><th>Difficulty</th><td>Easiest</td><td>Medium</td><td>Hard</td><td>Hardest</td></tr>
+<tr><th>Business value</th><td>Understand the situation</td><td>Find the root of the problem</td><td>See risks and opportunities in advance</td><td>Make the best decision</td></tr>
+</tbody></table></div>
+<p class="ins">All four work as one sequence: first see what happened, then why it happened, then what is likely to happen next, and finally what action to take.</p>
+</div></section>
+<footer>Numbers are simulated around Qualcomm's segment mix (Handsets, Automotive, IoT) for demonstration. Replace the tick() function with a real API feed for production use.</footer>
+<script>
+const N=60;
+const segs=[{n:'Handsets',base:5200,v:5200,vol:35,col:'--acc'},{n:'Automotive',base:1000,v:1000,vol:14,col:'--blue'},{n:'IoT',base:1700,v:1700,vol:20,col:'--green'}];
+const total=[];
+function rn(){return (Math.random()+Math.random()+Math.random()-1.5)*1.6}
+function tick(){
+  let t=0;
+  segs.forEach(s=>{s.v+=(s.base-s.v)*0.04+rn()*s.vol+(Math.random()<0.03?rn()*s.vol*3:0);s.h=s.h||[];s.h.push(s.v);if(s.h.length>N)s.h.shift();t+=s.v});
+  total.push(t);if(total.length>N)total.shift();
+}
+for(let i=0;i<N;i++)tick();
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const fmt=x=>'$'+Math.round(x).toLocaleString('en-US')+'M';
+function chart(id,sets){
+  const c=document.getElementById(id),d=devicePixelRatio||1,w=c.clientWidth,h=c.clientHeight;
+  c.width=w*d;c.height=h*d;const x=c.getContext('2d');x.scale(d,d);
+  let all=sets.flatMap(s=>s.data.filter(v=>v!=null).concat(s.lo||[],s.hi||[]));
+  let mn=Math.min(...all),mx=Math.max(...all),pad=(mx-mn)*.1||1;mn-=pad;mx+=pad;
+  const L=52,B=h-4,T=6,len=sets[0].len,X=i=>L+(w-L-6)*i/(len-1),Y=v=>T+(B-T)*(1-(v-mn)/(mx-mn));
+  x.font='11px sans-serif';x.fillStyle=css('--mute');x.strokeStyle=css('--line');x.lineWidth=1;
+  for(let k=0;k<4;k++){const v=mn+(mx-mn)*k/3,y=Y(v);x.beginPath();x.moveTo(L,y);x.lineTo(w,y);x.stroke();x.fillText(Math.round(v).toLocaleString('en-US'),2,y-2)}
+  sets.forEach(s=>{
+    if(s.lo){x.fillStyle=css(s.color);x.globalAlpha=.15;x.beginPath();s.lo.forEach((v,i)=>x[i?'lineTo':'moveTo'](X(s.off+i),Y(v)));for(let i=s.hi.length-1;i>=0;i--)x.lineTo(X(s.off+i),Y(s.hi[i]));x.fill();x.globalAlpha=1}
+    x.strokeStyle=css(s.color);x.lineWidth=2;x.setLineDash(s.dash||[]);x.beginPath();
+    s.data.forEach((v,i)=>x[i?'lineTo':'moveTo'](X(s.off+i),Y(v)));x.stroke();x.setLineDash([]);
+  });
+}
+function render(){
+  document.getElementById('clock').textContent=new Date().toLocaleTimeString();
+  // 1 Descriptive
+  const avg=total.reduce((a,b)=>a+b,0)/total.length;
+  chart('c1',[{data:total,len:N,off:0,color:'--acc'}]);
+  k1.textContent=fmt(total.at(-1));k2.textContent=fmt(avg);k3.textContent=fmt(Math.max(...total));k4.textContent=fmt(Math.min(...total));
+  // 2 Diagnostic
+  const ch=segs.map(s=>({n:s.n,col:s.col,abs:s.v-s.h[0],pct:(s.v-s.h[0])/s.h[0]*100}));
+  const m=Math.max(1,...ch.map(c=>Math.abs(c.pct)));
+  diag.innerHTML=ch.map(c=>{const wd=Math.abs(c.pct)/m*50,l=c.pct>=0?50:50-wd;return `<div class="row"><span>${c.n}</span><div class="track c"><i style="left:${l}%;width:${wd}%;background:var(${c.pct>=0?'--green':'--acc'})"></i></div><span>${c.pct>=0?'+':''}${c.pct.toFixed(2)}%</span></div>`}).join('');
+  const top=ch.reduce((a,b)=>Math.abs(b.abs)>Math.abs(a.abs)?b:a),tot=total.at(-1)-total[0];
+  i2.textContent=`Total is ${tot>=0?'up':'down'} ${fmt(Math.abs(tot))}. Root cause: ${top.n} moved ${top.abs>=0?'+':''}${Math.round(top.abs)}M, the biggest driver.`;
+  // 3 Predictive
+  const k=30,y=total.slice(-k),n=y.length,xs=y.map((_,i)=>i),mx=(n-1)/2,my=y.reduce((a,b)=>a+b,0)/n;
+  let sxy=0,sxx=0;xs.forEach((xv,i)=>{sxy+=(xv-mx)*(y[i]-my);sxx+=(xv-mx)**2});
+  const sl=sxy/sxx,ic=my-sl*mx;
+  const sd=Math.sqrt(y.reduce((a,v,i)=>a+(v-(ic+sl*i))**2,0)/n);
+  const H=15,fc=[],lo=[],hi=[];
+  for(let i=0;i<=H;i++){const v=ic+sl*(n-1+i),b=sd*(1+i/6);fc.push(v);lo.push(v-b);hi.push(v+b)}
+  chart('c3',[{data:total,len:N+H,off:0,color:'--blue'},{data:fc,lo,hi,len:N+H,off:N-1,color:'--amber',dash:[5,4]}]);
+  p1.textContent=fmt(fc.at(-1));p2.textContent=(sl>=0?'Rising ':'Falling ')+Math.abs(sl).toFixed(1)+'M/s';
+  // 4 Prescriptive
+  const mom=segs.map(s=>{const a=s.h.slice(-10),b=s.h.slice(-30,-20);return (a.reduce((p,q)=>p+q,0)/a.length)/(b.reduce((p,q)=>p+q,0)/b.length)-1});
+  const w0=[.5,.2,.3],sc=w0.map((w,i)=>w*Math.exp(mom[i]*60)),ss=sc.reduce((a,b)=>a+b,0);
+  const al=sc.map(v=>v/ss*100);
+  presc.innerHTML=segs.map((s,i)=>`<div class="row"><span>${s.n}</span><div class="track"><i style="left:0;width:${al[i]}%;background:var(${s.col})"></i></div><span>${al[i].toFixed(1)}%</span></div>`).join('');
+  const bi=al.reduce((a,v,i)=>v/w0[i]>al[a]/w0[a]?i:a,0);
+  i4.textContent=`Action: tilt extra budget toward ${segs[bi].n} (${(al[bi]-w0[bi]*100>=0?'+':'')}${(al[bi]-w0[bi]*100).toFixed(1)} pts vs base plan), where momentum is strongest.`;
+}
+const $=id=>document.getElementById(id);
+const [k1,k2,k3,k4,p1,p2,diag,i2,presc,i4]=['k1','k2','k3','k4','p1','p2','diag','i2','presc','i4'].map($);
+render();
+setInterval(()=>{tick();render()},1000);
+addEventListener('resize',render);
+</script>
+</body>
+</html>
